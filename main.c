@@ -42,47 +42,56 @@ brainfuck(FILE * bf_file, const size_t bf_file_size, int * returnVal)
 
         while ((instruction_pointer = fgetc(bf_file)) != EOF) {
                 switch (instruction_pointer) {
-                case '>': /* Move tape pointer right */
+                /* Move tape pointer right */
+                case '>':
                         tape_pointer++;
                         break;
 
-                case '<': /* Move tape pointer left */
+                /* Move tape pointer left */
+                case '<':
                         tape_pointer--;
                         break;
 
-                case '+': /* Increment tape pointer value, wrap around via 0xFF */
+                /* Increment tape pointer value, wrap around upon overflow via 0xFF */
+                case '+':
                         *tape_pointer =  (*tape_pointer + 1) & 0xFF;
                         break;
 
-                case '-': /* Decrement tape pointer value, wrap around via 0xFF */
+                /* Decrement tape pointer value, wrap around upon underflow via 0xFF */
+                case '-':
                         *tape_pointer = (*tape_pointer - 1) & 0xFF;
                         break;
 
-                case '.': /* Print tape pointer value to stdout*/
+                /* Print tape pointer value to stdout*/
+                case '.':
                         putchar(*tape_pointer);
                         break;
 
-                case ',': /* Get tape pointer value from stdin */
+                /* Get tape pointer value from stdin */
+                case ',':
                         *tape_pointer = getchar();
                         break;
 
-                case '[': /* Start of loop */
-                        /* If the stack isn't full, get the position of the [ and push it
-                         * onto the stack
-                         */
-                        if (!full(&stack)) {
-                                fgetpos(bf_file, &instruction_pointer_position);
-                                push(&stack, instruction_pointer_position);
-                        } else {
+                /* Start of loop */
+                case '[':
+                        if (full(&stack)) {
                                 fprintf(stderr, "ERROR: Tape overflow!\n");
                                 *returnVal = 1;
                                 goto cleanup;
                         }
+                        /* If the stack isn't full, get the position of the bracket
+                         * and push it onto the stack
+                         */
+                        fgetpos(bf_file, &instruction_pointer_position);
+                        push(&stack, instruction_pointer_position);
 
                         /* If the current cell is 0, move the instruction pointer
                          * forward to the matching bracket
                          */
-                        if (!*tape_pointer) {
+                        if (*tape_pointer == 0) {
+                                /* Keep track of the depth of the loops to ensure
+                                 * only the matching closing bracket is used
+                                 */
                                 depth = 1;
                                 while (depth > 0) {
                                         if (instruction_pointer == EOF) {
@@ -97,18 +106,17 @@ brainfuck(FILE * bf_file, const size_t bf_file_size, int * returnVal)
                         }
                         break;
 
-                case ']': /* End of loop */
-                        if (get_top(&stack)) {
-                                instruction_pointer_position = pop(&stack);
-                                if (*tape_pointer) { /* Jump back, if value is non-zero */
-                                        push(&stack, instruction_pointer_position);
-                                        fsetpos(bf_file, &instruction_pointer_position);
-                                }
-                        } else {
-                                printf("%d\n", get_top(&stack));
+                /* End of loop */
+                case ']':
+                        if (get_top(&stack) == 0) {
                                 fprintf(stderr, "ERROR: Unmatched ]\n");
                                 *returnVal = 1;
                                 goto cleanup;
+                        }
+                        instruction_pointer_position = pop(&stack);
+                        if (*tape_pointer != 0) { /* Jump back if the value is non-zero */
+                                push(&stack, instruction_pointer_position);
+                                fsetpos(bf_file, &instruction_pointer_position);
                         }
                         break;
 
@@ -129,7 +137,7 @@ main(const int argc, const char * argv[])
 {
         FILE * bf_file = NULL;
         size_t bf_file_size;
-        int returnVal = 0;
+        int return_val = 0;
 
         /* TODO: Implement correct arg parsing */
         if (argc < 2) {
@@ -148,9 +156,9 @@ main(const int argc, const char * argv[])
         bf_file_size = ftell(bf_file);
         rewind(bf_file);
 
-        brainfuck(bf_file, bf_file_size, &returnVal);
+        brainfuck(bf_file, bf_file_size, &return_val);
 
         fclose(bf_file);
 
-        return returnVal;
+        return return_val;
 }
