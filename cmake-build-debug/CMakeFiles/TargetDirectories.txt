@@ -1,3 +1,0 @@
-/home/antoine/Documents/Programming/C/Brainfuck-2024/cmake-build-debug/CMakeFiles/Brainfuck_2024.dir
-/home/antoine/Documents/Programming/C/Brainfuck-2024/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/antoine/Documents/Programming/C/Brainfuck-2024/cmake-build-debug/CMakeFiles/rebuild_cache.dir

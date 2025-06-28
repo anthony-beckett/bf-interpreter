@@ -1,71 +1,149 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+
+#include "lib/stack.h"
+
+#define TAPE_LENGTH 30000
+
+unsigned long
+getTotalSystemMemory(void)
+{
+        const long pages = sysconf(_SC_PHYS_PAGES);
+        const long page_size = sysconf(_SC_PAGE_SIZE);
+        return pages * page_size;
+}
 
 void
-brainfuck(FILE *bf_file)
+brainfuck(FILE * bf_file, const size_t bf_file_size, int * returnVal)
 {
-        int * instruction_pointer = nullptr;
-        int * data_pointer = calloc(0, 30000);
+        Stack stack;
+        unsigned char * tape = calloc(
+                TAPE_LENGTH, sizeof(unsigned char)
+        );
+        unsigned char * tape_pointer = tape;
+        int instruction_pointer;
+        fpos_t instruction_pointer_position;
+        int depth = 0;
 
-        while ((*instruction_pointer = fgetc(bf_file)) != EOF) {
-                switch (*instruction_pointer) {
-                        case '>':
-                                data_pointer++;
-                                break;
+        init(&stack, bf_file_size);
 
-                        case '<':
-                                data_pointer--;
-                                break;
+        if (!tape_pointer) {
+                perror("ERROR: Memory allocation failed!\n");
+                fprintf(
+                        stderr,
+                        "Tried to allocate %d bytes out of %lu bytes.\n",
+                        TAPE_LENGTH,
+                        getTotalSystemMemory()
+                );
+                *returnVal = 1;
+                goto cleanup;
+        }
 
-                        case '+':
-                                (*data_pointer)++;
-                                break;
+        while ((instruction_pointer = fgetc(bf_file)) != EOF) {
+                switch (instruction_pointer) {
+                case '>': /* Move tape pointer right */
+                        tape_pointer++;
+                        break;
 
-                        case '-':
-                                (*data_pointer)--;
-                                break;
+                case '<': /* Move tape pointer left */
+                        tape_pointer--;
+                        break;
 
-                        case '.':
-                                printf("%c", *data_pointer);
-                                break;
+                case '+': /* Increment tape pointer value, wrap around via 0xFF */
+                        *tape_pointer =  (*tape_pointer + 1) & 0xFF;
+                        break;
 
-                        case ',':
-                                break;
+                case '-': /* Decrement tape pointer value, wrap around via 0xFF */
+                        *tape_pointer = (*tape_pointer - 1) & 0xFF;
+                        break;
 
-                        case '[':
-                                if (!data_pointer) {
-                                        // Move forward
-                                } else {
+                case '.': /* Print tape pointer value to stdout*/
+                        putchar(*tape_pointer);
+                        break;
 
+                case ',': /* Get tape pointer value from stdin */
+                        *tape_pointer = getchar();
+                        break;
+
+                case '[': /* Start of loop */
+                        if (!full(&stack)) {
+                                fgetpos(bf_file, &instruction_pointer_position);
+                                push(&stack, instruction_pointer_position);
+                        } else {
+                                fprintf(stderr, "ERROR: Tape overflow!\n");
+                                *returnVal = 1;
+                                goto cleanup;
+                        }
+                        if (!*tape_pointer) {
+                                depth = 1;
+                                while (depth > 0) {
+                                        if (instruction_pointer == EOF) {
+                                                perror("ERROR: Unmatched [");
+                                                *returnVal = 1;
+                                                goto cleanup;
+                                        }
+                                        instruction_pointer = fgetc(bf_file);
+                                        depth += (instruction_pointer == '[');
+                                        depth -= (instruction_pointer == ']');
                                 }
-                                break;
+                        }
+                        break;
 
-                        case ']':
-                                break;
+                case ']': /* End of loop */
+                        if (get_top(&stack)) {
+                                instruction_pointer_position = pop(&stack);
+                                if (*tape_pointer) { /* Jump back, if value is non-zero */
+                                        push(&stack, instruction_pointer_position);
+                                        fsetpos(bf_file, &instruction_pointer_position);
+                                }
+                        } else {
+                                printf("%d\n", get_top(&stack));
+                                fprintf(stderr, "ERROR: Unmatched ]\n");
+                                *returnVal = 1;
+                                goto cleanup;
+                        }
+                        break;
 
-                        default: break;
+                default:
+                        break;
                 }
         }
 
-        free(data_pointer);
-        data_pointer = nullptr;
-        instruction_pointer = nullptr;
+        *returnVal = 0;
+
+cleanup:
+        free(tape);
+        tape = NULL;
 }
 
 int
-main(int argc, char * argv[])
+main(const int argc, const char * argv[])
 {
-        /* TODO: Implement correct arg parsing */
         FILE * bf_file = NULL;
+        size_t bf_file_size;
+        int returnVal = 0;
 
+        /* TODO: Implement correct arg parsing */
         if (argc < 2) {
-                fprintf(stderr, "ERROR: You must pass in a brainfuck file.\n");
+                perror("ERROR: You must pass in a brainfuck file.\n");
                 return 1;
         }
 
         bf_file = fopen(argv[1], "r");
 
-        brainfuck(bf_file);
+        if (bf_file == NULL) {
+                perror("ERROR: Error opening file");
+                return 1;
+        }
 
-        return 0;
+        fseek(bf_file, 0L, SEEK_END);
+        bf_file_size = ftell(bf_file);
+        rewind(bf_file);
+
+        brainfuck(bf_file, bf_file_size, &returnVal);
+
+        fclose(bf_file);
+
+        return returnVal;
 }
