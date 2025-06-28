@@ -1,0 +1,75 @@
+@startuml
+!pragma useVerticalIf on
+'skinparam conditionStyle InsideDiamond
+skinparam ConditionEndStyle hline
+
+
+start
+partition "**module** compile-time error analysis" {
+	if (isValidFile?) then (no)
+		#pink:error;
+		kill
+	else (yes)
+	endif
+}
+
+partition "**module** runner" {
+	while (EOF?) is (no)
+		switch (Instruction pointer value?)
+			case (<size:20><b> >)
+				:Increment data pointer;
+
+			case ( <size:20><b> <)
+				:Decrement data pointer;
+
+			case (<size:20><b> +)
+				:Increment byte
+				at data pointer;
+
+			case (<size:30><b> -)
+				:Decrement byte
+				at data pointer;
+
+			case (<size:30><b> .)
+				:Output byte
+				at data pointer;
+
+			case (<size:30><b> ,)
+				:Input a byte and
+				store at data pointer;
+
+			case (<size:20><b> [)
+			    if (fgetpos failure?) then (yes)
+			        #pink:error;
+                   	kill
+                else (no)
+                    if (Data pointer value == 0) then (true)
+                        :Move instruction pointer
+                        forward to matching ']';
+                    else (false)
+                        :Append instruction
+                        pointer address to
+                        stack;
+                    endif
+				endif
+
+			case (<size:20><b> ])
+				:Pop prior [ address 
+				from stack;
+				if (data pointer value == 0) then (False)
+					:Move instruction pointer 
+					backward to matching '['
+					<i>e.g. Assign instruction pointer
+					<i>popped address;
+				else (True)
+				endif
+
+			case (<i> Default)
+				:ignore;
+		endswitch
+		:Increment instruction pointer;
+	endwhile (yes)
+}
+-> Exit gracefully;
+stop
+@enduml
