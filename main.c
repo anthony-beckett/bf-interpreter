@@ -27,6 +27,9 @@ getNecessaryStackSize(FILE * bf_file, size_t * necessary_stack_size)
         char instruction_pointer;
         *necessary_stack_size = 0;
 
+        /* Iterate through the file, counting the number of 
+         * opening brackets
+         */
         while ((instruction_pointer = fgetc(bf_file)) != EOF)
                 *necessary_stack_size += (instruction_pointer == '[');
 
