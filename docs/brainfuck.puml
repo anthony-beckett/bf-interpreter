@@ -54,13 +54,16 @@ partition "**module** runner" {
 				endif
 
 			case (<size:20><b> ])
-				:Pop prior [ address 
+				:Pop [ address
 				from stack;
 				if (data pointer value == 0) then (False)
 					:Move instruction pointer 
 					backward to matching '['
 					<i>e.g. Assign instruction pointer
 					<i>popped address;
+
+					:Push  [ address back
+					onto stack;
 				else (True)
 				endif
 
