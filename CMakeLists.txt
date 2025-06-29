@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.29)
-project(Brainfuck_2024 C)
+project(Brainfsck_Interpreter C)
 
 set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_STANDARD_REQUIRED ON)
