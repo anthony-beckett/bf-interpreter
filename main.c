@@ -6,6 +6,25 @@
 
 #define TAPE_LENGTH 30000
 
+
+void getNecessaryStackSize(FILE *, size_t *);
+unsigned long getTotalSystemMemory(void);
+void brainfsck(FILE *,  size_t, int *);
+
+
+void
+getNecessaryStackSize(FILE * bf_file, size_t * necessary_stack_size)
+{
+        char instruction_pointer;
+        *necessary_stack_size = 0;
+
+        while ((instruction_pointer = fgetc(bf_file)) != EOF) {
+                *necessary_stack_size += (instruction_pointer == '[');
+        }
+
+        (*necessary_stack_size)++;
+}
+
 unsigned long
 getTotalSystemMemory(void)
 {
@@ -15,20 +34,20 @@ getTotalSystemMemory(void)
 }
 
 void
-brainfuck(FILE * bf_file, const size_t bf_file_size, int * returnVal)
+brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
 {
         Stack stack;
         unsigned char * tape = calloc(
                 TAPE_LENGTH, sizeof(unsigned char)
         );
-        unsigned char * tape_pointer = tape;
+        unsigned char * data_pointer = tape;
         int instruction_pointer;
         fpos_t instruction_pointer_position;
         int depth = 0;
 
-        init(&stack, bf_file_size);
+        init(&stack, necessary_stack_size);
 
-        if (!tape_pointer) {
+        if (!tape) {
                 perror("ERROR: Memory allocation failed!\n");
                 fprintf(
                         stderr,
@@ -44,32 +63,34 @@ brainfuck(FILE * bf_file, const size_t bf_file_size, int * returnVal)
                 switch (instruction_pointer) {
                 /* Move tape pointer right */
                 case '>':
-                        tape_pointer++;
+                        data_pointer  = (data_pointer - tape + 1) % TAPE_LENGTH + tape;
                         break;
 
                 /* Move tape pointer left */
                 case '<':
-                        tape_pointer--;
+                        data_pointer = (
+                                data_pointer - tape - 1 + TAPE_LENGTH
+                        ) % TAPE_LENGTH + tape;
                         break;
 
                 /* Increment tape pointer value, wrap around upon overflow via 0xFF */
                 case '+':
-                        *tape_pointer =  (*tape_pointer + 1) & 0xFF;
+                        *data_pointer =  (*data_pointer + 1);
                         break;
 
                 /* Decrement tape pointer value, wrap around upon underflow via 0xFF */
                 case '-':
-                        *tape_pointer = (*tape_pointer - 1) & 0xFF;
+                        *data_pointer = (*data_pointer - 1);
                         break;
 
                 /* Print tape pointer value to stdout*/
                 case '.':
-                        putchar(*tape_pointer);
+                        putchar(*data_pointer);
                         break;
 
                 /* Get tape pointer value from stdin */
                 case ',':
-                        *tape_pointer = getchar();
+                        *data_pointer = getchar();
                         break;
 
                 /* Start of loop */
@@ -79,16 +100,11 @@ brainfuck(FILE * bf_file, const size_t bf_file_size, int * returnVal)
                                 *returnVal = 1;
                                 goto cleanup;
                         }
-                        /* If the stack isn't full, get the position of the bracket
-                         * and push it onto the stack
-                         */
-                        fgetpos(bf_file, &instruction_pointer_position);
-                        push(&stack, instruction_pointer_position);
 
                         /* If the current cell is 0, move the instruction pointer
                          * forward to the matching bracket
                          */
-                        if (*tape_pointer == 0) {
+                        if (*data_pointer == 0) {
                                 /* Keep track of the depth of the loops to ensure
                                  * only the matching closing bracket is used
                                  */
@@ -103,6 +119,12 @@ brainfuck(FILE * bf_file, const size_t bf_file_size, int * returnVal)
                                         depth += (instruction_pointer == '[');
                                         depth -= (instruction_pointer == ']');
                                 }
+                        } else {
+                                /* If the stack isn't full, get the position of the bracket
+                                 * and push it onto the stack
+                                 */
+                                fgetpos(bf_file, &instruction_pointer_position);
+                                push(&stack, instruction_pointer_position);
                         }
                         break;
 
@@ -114,7 +136,7 @@ brainfuck(FILE * bf_file, const size_t bf_file_size, int * returnVal)
                                 goto cleanup;
                         }
                         instruction_pointer_position = pop(&stack);
-                        if (*tape_pointer != 0) { /* Jump back if the value is non-zero */
+                        if (*data_pointer != 0) { /* Jump back if the value is non-zero */
                                 push(&stack, instruction_pointer_position);
                                 fsetpos(bf_file, &instruction_pointer_position);
                         }
@@ -136,7 +158,7 @@ int
 main(const int argc, const char * argv[])
 {
         FILE * bf_file = NULL;
-        size_t bf_file_size;
+        size_t necessary_stack_size = 0;
         int return_val = 0;
 
         /* TODO: Implement correct arg parsing */
@@ -152,11 +174,10 @@ main(const int argc, const char * argv[])
                 return 1;
         }
 
-        fseek(bf_file, 0L, SEEK_END);
-        bf_file_size = ftell(bf_file);
+        getNecessaryStackSize(bf_file, &necessary_stack_size);
         rewind(bf_file);
 
-        brainfuck(bf_file, bf_file_size, &return_val);
+        brainfsck(bf_file, necessary_stack_size, &return_val);
 
         fclose(bf_file);
 
