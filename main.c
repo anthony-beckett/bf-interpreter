@@ -63,7 +63,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * return_val)
                         TAPE_LENGTH,
                         getTotalSystemMemory()
                 );
-                *returnVal = 1;
+                *return_val = 1;
                 goto cleanup;
         }
 
@@ -105,7 +105,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * return_val)
                 case '[':
                         if (full(&stack)) {
                                 errorHandler("ERROR: Tape overflow!");
-                                *returnVal = 1;
+                                *return_val = 1;
                                 goto cleanup;
                         }
 
@@ -120,7 +120,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * return_val)
                                 while (depth > 0) {
                                         if (instruction_pointer == EOF) {
                                                 errorHandler("ERROR: Unmatched [!");
-                                                *returnVal = 1;
+                                                *return_val = 1;
                                                 goto cleanup;
                                         }
                                         instruction_pointer = fgetc(bf_file);
@@ -140,7 +140,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * return_val)
                 case ']':
                         if (get_top(&stack) == 0) {
                                 errorHandler("ERROR: Unmatched ]!");
-                                *returnVal = 1;
+                                *return_val = 1;
                                 goto cleanup;
                         }
                         instruction_pointer_position = pop(&stack);
@@ -155,7 +155,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * return_val)
                 }
         }
 
-        *returnVal = 0;
+        *return_val = 0;
 
 cleanup:
         free(tape);
