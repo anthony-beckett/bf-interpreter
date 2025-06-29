@@ -18,9 +18,8 @@ getNecessaryStackSize(FILE * bf_file, size_t * necessary_stack_size)
         char instruction_pointer;
         *necessary_stack_size = 0;
 
-        while ((instruction_pointer = fgetc(bf_file)) != EOF) {
+        while ((instruction_pointer = fgetc(bf_file)) != EOF)
                 *necessary_stack_size += (instruction_pointer == '[');
-        }
 
         (*necessary_stack_size)++;
 }
@@ -75,12 +74,12 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
 
                 /* Increment tape pointer value, wrap around upon overflow via 0xFF */
                 case '+':
-                        *data_pointer =  (*data_pointer + 1);
+                        *data_pointer =  (*data_pointer + 1) & 0xFF;
                         break;
 
                 /* Decrement tape pointer value, wrap around upon underflow via 0xFF */
                 case '-':
-                        *data_pointer = (*data_pointer - 1);
+                        *data_pointer = (*data_pointer - 1) & 0xFF;
                         break;
 
                 /* Print tape pointer value to stdout*/
