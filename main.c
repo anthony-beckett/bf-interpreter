@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -6,11 +7,19 @@
 
 #define TAPE_LENGTH 30000
 
-
+void errorHandler(char *);
 void getNecessaryStackSize(FILE *, size_t *);
 unsigned long getTotalSystemMemory(void);
 void brainfsck(FILE *,  size_t, int *);
 
+
+void
+errorHandler(char * msg) {
+        if (errno)
+                perror(msg);
+        else
+                fprintf(stderr, "%s\n", msg);
+}
 
 void
 getNecessaryStackSize(FILE * bf_file, size_t * necessary_stack_size)
@@ -47,7 +56,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
         init(&stack, necessary_stack_size);
 
         if (!tape) {
-                perror("ERROR: Memory allocation failed!\n");
+                errorHandler("ERROR: Memory allocation failed!");
                 fprintf(
                         stderr,
                         "Tried to allocate %d bytes out of %lu bytes.\n",
@@ -95,7 +104,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
                 /* Start of loop */
                 case '[':
                         if (full(&stack)) {
-                                perror("ERROR: Tape overflow!\n");
+                                errorHandler("ERROR: Tape overflow!");
                                 *returnVal = 1;
                                 goto cleanup;
                         }
@@ -110,7 +119,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
                                 depth = 1;
                                 while (depth > 0) {
                                         if (instruction_pointer == EOF) {
-                                                perror("ERROR: Unmatched [!\n");
+                                                errorHandler("ERROR: Unmatched [!");
                                                 *returnVal = 1;
                                                 goto cleanup;
                                         }
@@ -130,7 +139,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
                 /* End of loop */
                 case ']':
                         if (get_top(&stack) == 0) {
-                                perror("ERROR: Unmatched ]!\n");
+                                errorHandler("ERROR: Unmatched ]!");
                                 *returnVal = 1;
                                 goto cleanup;
                         }
@@ -162,14 +171,14 @@ main(const int argc, const char * argv[])
 
         /* TODO: Implement correct arg parsing */
         if (argc < 2) {
-                perror("ERROR: You must pass in a brainfuck file.\n");
+                errorHandler("ERROR: You must pass in a brainfuck file.");
                 return 1;
         }
 
         bf_file = fopen(argv[1], "r");
 
         if (bf_file == NULL) {
-                perror("ERROR: Error opening file");
+                errorHandler("ERROR: Error opening file");
                 return 1;
         }
 
