@@ -42,7 +42,7 @@ getTotalSystemMemory(void)
 }
 
 void
-brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
+brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * return_val)
 {
         Stack stack;
         unsigned char * tape = calloc(
