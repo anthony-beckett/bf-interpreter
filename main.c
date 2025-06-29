@@ -95,7 +95,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
                 /* Start of loop */
                 case '[':
                         if (full(&stack)) {
-                                fprintf(stderr, "ERROR: Tape overflow!\n");
+                                perror("ERROR: Tape overflow!\n");
                                 *returnVal = 1;
                                 goto cleanup;
                         }
@@ -110,7 +110,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
                                 depth = 1;
                                 while (depth > 0) {
                                         if (instruction_pointer == EOF) {
-                                                perror("ERROR: Unmatched [");
+                                                perror("ERROR: Unmatched [!\n");
                                                 *returnVal = 1;
                                                 goto cleanup;
                                         }
@@ -118,10 +118,10 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
                                         depth += (instruction_pointer == '[');
                                         depth -= (instruction_pointer == ']');
                                 }
+                        /* Otherwise, get the position of the bracket and push
+                         * it onto the stack
+                         */
                         } else {
-                                /* If the stack isn't full, get the position of the bracket
-                                 * and push it onto the stack
-                                 */
                                 fgetpos(bf_file, &instruction_pointer_position);
                                 push(&stack, instruction_pointer_position);
                         }
@@ -130,7 +130,7 @@ brainfsck(FILE * bf_file, const size_t necessary_stack_size, int * returnVal)
                 /* End of loop */
                 case ']':
                         if (get_top(&stack) == 0) {
-                                fprintf(stderr, "ERROR: Unmatched ]\n");
+                                perror("ERROR: Unmatched ]!\n");
                                 *returnVal = 1;
                                 goto cleanup;
                         }
