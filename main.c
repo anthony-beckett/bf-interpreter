@@ -14,7 +14,8 @@ void brainfsck(FILE *,  size_t, int *);
 
 
 void
-errorHandler(char * msg) {
+errorHandler(char * msg)
+{
         if (errno)
                 perror(msg);
         else
